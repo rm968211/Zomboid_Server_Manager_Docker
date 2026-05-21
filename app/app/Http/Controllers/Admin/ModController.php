@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\LookupWorkshopModRequest;
 use App\Services\AuditLogger;
 use App\Services\DockerManager;
 use App\Services\ModManager;
+use App\Services\SteamWorkshopClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +21,7 @@ class ModController extends Controller
         private readonly ModManager $modManager,
         private readonly AuditLogger $auditLogger,
         private readonly DockerManager $dockerManager,
+        private readonly SteamWorkshopClient $workshopClient,
     ) {}
 
     public function index(): Response
@@ -46,9 +49,31 @@ class ModController extends Controller
 
         return Inertia::render('admin/mods', [
             'mods' => $mods,
-            'protectedWorkshopIds' => ModManager::PROTECTED_WORKSHOP_IDS,
+            'protectedWorkshopIds' => array_keys(ModManager::PROTECTED_MODS),
             'pendingRestart' => $pendingRestart,
             'serverRunning' => $serverRunning,
+        ]);
+    }
+
+    public function lookup(LookupWorkshopModRequest $request): JsonResponse
+    {
+        $workshopId = $request->validated('workshop_id');
+        $details = $this->workshopClient->getDetails($workshopId);
+
+        if ($details === null) {
+            return response()->json([
+                'found' => false,
+                'workshop_id' => $workshopId,
+            ], 404);
+        }
+
+        return response()->json([
+            'found' => true,
+            'workshop_id' => $details['workshop_id'],
+            'title' => $details['title'],
+            'preview_url' => $details['preview_url'],
+            'mod_ids' => $details['mod_ids'],
+            'map_folders' => $details['map_folders'],
         ]);
     }
 
