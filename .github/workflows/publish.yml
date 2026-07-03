@@ -12,6 +12,10 @@ on:
         description: "Push the latest tag"
         type: boolean
         default: true
+      force_version_tags:
+        description: "Force overwrite semver version tags (e.g. 1.0.0, 1.0, 1)"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -59,9 +63,9 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-manager
           tags: |
-            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
-            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
-            type=raw,value=${{ steps.version.outputs.major }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
             type=sha
           flavor: |
             latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
@@ -85,9 +89,9 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server
           tags: |
-            type=raw,value=${{ steps.version.outputs.version }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
-            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
-            type=raw,value=${{ steps.version.outputs.major }},enable=${{ github.ref_type == 'tag' && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ (github.ref_type == 'tag' || inputs.force_version_tags == 'true') && steps.version.outputs.found == 'true' }}
             type=sha
           flavor: |
             latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
