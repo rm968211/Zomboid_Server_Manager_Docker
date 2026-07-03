@@ -1,4 +1,4 @@
-name: Build and push pz-app image
+name: Build and push images
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
         default: true
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -53,11 +53,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      # --- zomboid-manager ---
+
+      - name: Extract metadata (zomboid-manager)
+        id: meta-manager
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/pz-app
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-manager
           tags: |
             type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
             type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
@@ -66,13 +68,40 @@ jobs:
           flavor: |
             latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
 
-      - name: Build and push
+      - name: Build and push zomboid-manager
         uses: docker/build-push-action@v6
         with:
           context: ./app
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta-manager.outputs.tags }}
+          labels: ${{ steps.meta-manager.outputs.labels }}
+          cache-from: type=gha,scope=zomboid-manager
+          cache-to: type=gha,mode=max,scope=zomboid-manager
+
+      # --- zomboid-server ---
+
+      - name: Extract metadata (zomboid-server)
+        id: meta-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=sha
+          flavor: |
+            latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
+
+      - name: Build and push zomboid-server
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: game-server/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          cache-from: type=gha,scope=zomboid-server
+          cache-to: type=gha,mode=max,scope=zomboid-server

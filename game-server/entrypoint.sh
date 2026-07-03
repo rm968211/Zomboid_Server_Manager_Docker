@@ -13,6 +13,9 @@ if [ "$(id -u)" = "0" ]; then
     chown steam:steam /home/steam/Zomboid/db 2>/dev/null || true
     chown steam:steam /home/steam/Zomboid/Saves 2>/dev/null || true
     chmod -R 1777 /home/steam/Zomboid/Lua 2>/dev/null || true
+    # Stage ZomboidManager mod from image into the data volume (source baked at /opt/zm-mod)
+    cp -r /opt/zm-mod /home/steam/Zomboid/mods/ZomboidManager 2>/dev/null || true
+    chown -R steam:steam /home/steam/Zomboid/mods/ZomboidManager 2>/dev/null || true
     echo "[entrypoint] Dropping to steam user..."
     exec env HOME=/home/steam su -p -s /bin/bash steam -- "$0" "$@"
 fi
