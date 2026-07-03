@@ -1,4 +1,4 @@
-FROM ghcr.io/joyfui/project-zomboid-server-docker-arm64:latest
+FROM rm968211/project-zomboid-server-docker-arm64:latest
 
 COPY game-server/entrypoint.sh /home/steam/entrypoint.sh
 COPY game-server/configure-server.sh /home/steam/configure-server.sh
