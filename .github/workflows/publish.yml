@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       push_version_tags:
@@ -66,7 +68,7 @@ jobs:
             type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
             type=sha
           flavor: |
-            latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
+            latest=true
 
       - name: Build and push zomboid-manager
         uses: docker/build-push-action@v6
@@ -92,7 +94,7 @@ jobs:
             type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
             type=sha
           flavor: |
-            latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
+            latest=true
 
       - name: Build and push zomboid-server
         uses: docker/build-push-action@v6
