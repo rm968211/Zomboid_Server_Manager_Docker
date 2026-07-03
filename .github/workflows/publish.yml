@@ -1,4 +1,4 @@
-name: Build and push pz-app image
+name: Build and push images
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
         default: true
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -53,8 +53,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
+      # --- pz-app ---
+
+      - name: Extract metadata (pz-app)
+        id: meta-app
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/pz-app
@@ -66,13 +68,40 @@ jobs:
           flavor: |
             latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
 
-      - name: Build and push
+      - name: Build and push pz-app
         uses: docker/build-push-action@v6
         with:
           context: ./app
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta-app.outputs.tags }}
+          labels: ${{ steps.meta-app.outputs.labels }}
+          cache-from: type=gha,scope=pz-app
+          cache-to: type=gha,mode=max,scope=pz-app
+
+      # --- pz-game-server ---
+
+      - name: Extract metadata (pz-game-server)
+        id: meta-game-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/pz-game-server
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=sha
+          flavor: |
+            latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
+
+      - name: Build and push pz-game-server
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: game-server/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta-game-server.outputs.tags }}
+          labels: ${{ steps.meta-game-server.outputs.labels }}
+          cache-from: type=gha,scope=pz-game-server
+          cache-to: type=gha,mode=max,scope=pz-game-server
