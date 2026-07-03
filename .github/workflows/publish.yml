@@ -5,6 +5,15 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      push_version_tags:
+        description: "Push semver version tags (e.g. 1.0.0, 1.0, 1)"
+        type: boolean
+        default: true
+      push_latest:
+        description: "Push the latest tag"
+        type: boolean
+        default: true
 
 jobs:
   build-and-push:
@@ -50,12 +59,12 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/pz-app
           tags: |
-            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found }}
-            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found }}
-            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found }}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found == 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_version_tags == 'true') }}
             type=sha
           flavor: |
-            latest=true
+            latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
