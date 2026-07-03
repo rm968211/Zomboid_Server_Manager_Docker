@@ -13,6 +13,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
+      - name: Resolve version from latest git tag
+        id: version
+        run: |
+          TAG=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$TAG" ]; then
+            VERSION="${TAG#v}"
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "major_minor=$MAJOR.$MINOR" >> $GITHUB_OUTPUT
+            echo "major=$MAJOR" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -32,9 +50,9 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/pz-app
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=${{ steps.version.outputs.version }},enable=${{ steps.version.outputs.found }}
+            type=raw,value=${{ steps.version.outputs.major_minor }},enable=${{ steps.version.outputs.found }}
+            type=raw,value=${{ steps.version.outputs.major }},enable=${{ steps.version.outputs.found }}
             type=sha
           flavor: |
             latest=true
