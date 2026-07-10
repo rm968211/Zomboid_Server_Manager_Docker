@@ -8,6 +8,7 @@ use App\Models\AutoRestartSetting;
 use App\Services\AuditLogger;
 use App\Services\DockerManager;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -37,9 +38,14 @@ class AutoRestartCheck extends Command
             return self::SUCCESS;
         }
 
-        // If a restart is already pending, check if it's overdue
+        // If a restart is already pending, check if it's overdue. Compare against the
+        // timestamp stored when the restart was scheduled — $nextRestart is always a
+        // future slot (rolled forward once the original time passes), so comparing
+        // against it here would never be true.
         if (Cache::has('server.auto_restart.pending')) {
-            if (now()->gte($nextRestart->copy()->addMinutes(5))) {
+            $scheduledFor = Cache::get('server.auto_restart.pending');
+
+            if ($scheduledFor instanceof Carbon && now()->gte($scheduledFor->copy()->addMinutes(5))) {
                 Cache::forget('server.auto_restart.pending');
                 Cache::forget('server.pending_action:restart');
                 Log::warning('Auto-restart: pending restart was overdue, cleared caches');
@@ -84,13 +90,15 @@ class AutoRestartCheck extends Command
         $triggerCacheKey = "server.auto_restart.triggered:{$dateKey}:{$timeKey}";
 
         if ($secondsUntilRestart <= $warningWindow && ! Cache::has($triggerCacheKey)) {
+            $scheduledRestartAt = now()->addSeconds($secondsUntilRestart);
+
             Cache::put($triggerCacheKey, true, $secondsUntilRestart + 300);
-            Cache::put('server.auto_restart.pending', true, $secondsUntilRestart + 300);
+            Cache::put('server.auto_restart.pending', $scheduledRestartAt, $secondsUntilRestart + 300);
             Cache::put('server.pending_action:restart', true, $secondsUntilRestart + 300);
 
             // Dispatch the restart job with delay
             RestartGameServer::dispatch('127.0.0.1')
-                ->delay(now()->addSeconds($secondsUntilRestart));
+                ->delay($scheduledRestartAt);
 
             // Dispatch countdown warnings
             if ($secondsUntilRestart > 0) {

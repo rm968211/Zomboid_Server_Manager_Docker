@@ -140,7 +140,7 @@ class PzAccountAuthenticator
             return password_verify($password, $storedPassword);
         }
 
-        return $password === $storedPassword;
+        return hash_equals($storedPassword, $password);
     }
 
     /**

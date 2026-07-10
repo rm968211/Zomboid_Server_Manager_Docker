@@ -237,9 +237,11 @@ export default function PzMap({
 
     // Stable refs for callbacks so event handlers always see latest values
     const onZoneDrawnRef = useRef(onZoneDrawn);
-    onZoneDrawnRef.current = onZoneDrawn;
     const drawingModeRef = useRef(drawingMode);
-    drawingModeRef.current = drawingMode;
+    useEffect(() => {
+        onZoneDrawnRef.current = onZoneDrawn;
+        drawingModeRef.current = drawingMode;
+    }, [onZoneDrawn, drawingMode]);
 
     // Initialize map
     useEffect(() => {

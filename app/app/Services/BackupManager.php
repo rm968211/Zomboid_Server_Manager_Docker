@@ -108,13 +108,17 @@ class BackupManager
 
         // 2. Stop the game server and wait for file handles to be released
         $this->stopServer();
-        sleep(3);
 
-        // 3. Extract backup over save directory
-        $this->extractBackup($backup);
+        try {
+            sleep(3);
 
-        // 4. Start the game server
-        $this->docker->startContainer();
+            // 3. Extract backup over save directory
+            $this->extractBackup($backup);
+        } finally {
+            // 4. Start the game server even if extraction fails — otherwise a
+            // corrupt/unsafe backup leaves the server stopped indefinitely.
+            $this->docker->startContainer();
+        }
 
         return [
             'pre_rollback_backup' => $preRollback['backup'],
@@ -254,6 +258,14 @@ class BackupManager
                 'error' => $result->errorOutput(),
                 'exit_code' => $result->exitCode(),
             ]);
+
+            // But a non-zero exit that also produced no usable archive isn't a partial
+            // backup — it's a total failure (disk full, permissions, etc). Letting it
+            // through would let callers (rollback/import) trust a worthless "successful"
+            // 0-byte safety snapshot before overwriting live data.
+            if (! file_exists($outputPath) || filesize($outputPath) === 0) {
+                throw new \RuntimeException('Backup archive was not created: '.$result->errorOutput());
+            }
         }
     }
 
@@ -433,7 +445,7 @@ class BackupManager
             if ($layout === 'full' || $layout === 'save_only') {
                 Process::timeout(60)->run("cp -rf {$tempDir}/* {$dataPath}/");
             } else {
-                $saveDir = "{$dataPath}/Saves/Multiplayer/{$serverName}";
+                $saveDir = "{$dataPath}/Saves/Multiplayer/".config('zomboid.save_name', $serverName);
                 $this->ensureDirectoryExists($saveDir);
                 Process::timeout(60)->run("cp -rf {$tempDir}/* {$saveDir}/");
             }
@@ -441,11 +453,13 @@ class BackupManager
             Process::timeout(30)->run(['rm', '-rf', $tempDir]);
         }
 
-        // Handle server name mismatch — rename save dir + config files for full imports
+        // Handle server name mismatch — rename save dir + config files for full imports.
+        // detected_server_name comes from the zip's save directory path, which uses
+        // PZ's sanitized form (spaces as underscores), so compare against save_name.
         if (
             in_array($layout, ['full', 'save_only'], true)
             && $metadata['detected_server_name'] !== null
-            && $metadata['detected_server_name'] !== $serverName
+            && $metadata['detected_server_name'] !== config('zomboid.save_name', $serverName)
         ) {
             $this->renameImportedServerArtifacts($dataPath, $metadata['detected_server_name'], $serverName, $layout);
         }
@@ -456,9 +470,10 @@ class BackupManager
      */
     private function renameImportedServerArtifacts(string $dataPath, string $fromName, string $toName, string $layout): void
     {
-        // Rename save directory
+        // Rename save directory — the on-disk save dir uses PZ's sanitized name
+        // (spaces as underscores), while Server/*.ini and db/*.db keep the raw name.
         $oldSavePath = "{$dataPath}/Saves/Multiplayer/{$fromName}";
-        $newSavePath = "{$dataPath}/Saves/Multiplayer/{$toName}";
+        $newSavePath = "{$dataPath}/Saves/Multiplayer/".str_replace(' ', '_', $toName);
 
         if (is_dir($oldSavePath)) {
             if (is_dir($newSavePath)) {

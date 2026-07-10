@@ -104,6 +104,7 @@ class PlayerMapController extends Controller
 
         $mapConfig = $this->mapConfigBuilder->build();
         $safeZoneConfig = $this->safeZoneManager->getConfig();
+        $generationStatus = $this->readGenerationStatus();
 
         return Inertia::render('admin/player-map', [
             'markers' => $markers,
@@ -111,10 +112,34 @@ class PlayerMapController extends Controller
             'serverStatus' => $resolved['game_status'],
             'mapConfig' => $mapConfig,
             'hasTiles' => $mapConfig['tileUrl'] !== null,
-            'tileProgress' => null,
-            'tilesGenerating' => false,
+            'usingLocalTiles' => $mapConfig['source'] === 'local',
+            'tilesGenerating' => $generationStatus['status'] === 'running',
+            'tileError' => $generationStatus['status'] === 'failed' ? $generationStatus['error'] : null,
             'safeZones' => $safeZoneConfig['enabled'] ? $safeZoneConfig['zones'] : [],
         ]);
+    }
+
+    /**
+     * Read the last known status of the background map-tile generation command,
+     * written by GenerateMapTiles, so the admin UI can show what actually happened
+     * instead of a generic "no tiles yet" message.
+     *
+     * @return array{status: string, error: string|null}
+     */
+    private function readGenerationStatus(): array
+    {
+        $statusPath = config('zomboid.map.status_path');
+
+        if (! is_file($statusPath)) {
+            return ['status' => 'unknown', 'error' => null];
+        }
+
+        $data = json_decode(file_get_contents($statusPath), true);
+
+        return [
+            'status' => $data['status'] ?? 'unknown',
+            'error' => $data['error'] ?? null,
+        ];
     }
 
     /**

@@ -61,6 +61,21 @@ class RconClient
     {
         $this->ensureConnected();
 
+        try {
+            return $this->sendCommand($command);
+        } catch (RuntimeException) {
+            // This client is a long-lived singleton (shared across queue jobs), so a socket
+            // left over from a dropped connection or a game-server restart would otherwise
+            // wedge every future command. Reconnect once and retry before giving up.
+            $this->close();
+            $this->connect();
+
+            return $this->sendCommand($command);
+        }
+    }
+
+    private function sendCommand(string $command): string
+    {
         $requestId = $this->nextRequestId();
         $this->sendPacket($requestId, self::SERVERDATA_EXECCOMMAND, $command);
 

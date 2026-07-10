@@ -55,7 +55,7 @@ return [
 
         'pz_players' => [
             'driver' => 'sqlite',
-            'database' => env('PZ_DATA_PATH', '/pz-data').'/Saves/Multiplayer/'.env('PZ_SERVER_NAME', 'ZomboidServer').'/players.db',
+            'database' => env('PZ_DATA_PATH', '/pz-data').'/Saves/Multiplayer/'.str_replace(' ', '_', env('PZ_SERVER_NAME', 'ZomboidServer')).'/players.db',
             'prefix' => '',
             'foreign_key_constraints' => false,
             'busy_timeout' => 5000,

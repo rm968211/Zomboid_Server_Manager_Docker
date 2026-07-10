@@ -134,9 +134,12 @@ class SandboxLuaParser
             return false;
         }
 
-        // Quoted string
+        // Quoted string — reverse formatValue()'s escaping (backslash-then-quote on
+        // write, so unescape quote-then-backslash on read) to keep round trips exact.
         if (preg_match('/^"(.*)"$/', $value, $m)) {
-            return $m[1];
+            $unescaped = str_replace('\\"', '"', $m[1]);
+
+            return str_replace('\\\\', '\\', $unescaped);
         }
 
         // Float (contains dot)

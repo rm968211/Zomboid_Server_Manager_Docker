@@ -33,7 +33,9 @@ return [
         'server_ini' => env('PZ_DATA_PATH', '/pz-data').'/Server/'.env('PZ_SERVER_NAME', 'ZomboidServer').'.ini',
         'sandbox_lua' => env('PZ_DATA_PATH', '/pz-data').'/Server/'.env('PZ_SERVER_NAME', 'ZomboidServer').'_SandboxVars.lua',
         'db' => env('PZ_DATA_PATH', '/pz-data').'/db/serverPZ.db',
-        'players_db' => env('PZ_DATA_PATH', '/pz-data').'/Saves/Multiplayer/'.env('PZ_SERVER_NAME', 'ZomboidServer').'/players.db',
+        // PZ sanitizes the save directory name (spaces become underscores), unlike
+        // the Server/ config files which keep the raw server name.
+        'players_db' => env('PZ_DATA_PATH', '/pz-data').'/Saves/Multiplayer/'.str_replace(' ', '_', env('PZ_SERVER_NAME', 'ZomboidServer')).'/players.db',
     ],
 
     /*
@@ -52,6 +54,7 @@ return [
 
     'map' => [
         'tiles_path' => env('PZ_MAP_TILES_PATH', '/map-tiles'),
+        'status_path' => storage_path('app/map-tile-status.json'),
         'tile_size' => 256,
         'min_zoom' => 13,
         'max_zoom' => 17,
@@ -75,6 +78,10 @@ return [
     |--------------------------------------------------------------------------
     */
     'server_name' => env('PZ_SERVER_NAME', 'ZomboidServer'),
+
+    // On-disk name of the Saves/Multiplayer/<name> directory. PZ sanitizes it
+    // (spaces become underscores); Server/*.ini and db/*.db keep the raw name.
+    'save_name' => str_replace(' ', '_', env('PZ_SERVER_NAME', 'ZomboidServer')),
 
     /*
     |--------------------------------------------------------------------------

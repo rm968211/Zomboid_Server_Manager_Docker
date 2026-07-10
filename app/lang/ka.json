@@ -392,6 +392,8 @@
     "admin.player_map.server_offline_warning": "სერვერი ოფლაინია. მოთამაშეთა პოზიციები აჩვენებს ბოლო ცნობილ ადგილმდებარეობებს.",
     "admin.player_map.server_starting": "სერვერი იტვირთება. ცოცხალი პოზიციები გამოჩნდება თამაშის სერვერის მზადყოფნის შემდეგ.",
     "admin.player_map.server_starting_warning": "სერვერი იტვირთება. ცოცხალი პოზიციები გამოჩნდება თამაშის სერვერის მზადყოფნის შემდეგ.",
+    "admin.player_map.tile_error": "რუკის ფრაგმენტების გენერირება ვერ მოხერხდა.",
+    "admin.player_map.tile_error_hint": "შეამოწმეთ storage/logs/pzmap2dzi.log აპლიკაციის კონტეინერში, შემდეგ ხელახლა გაუშვით",
     "admin.player_map.tiles_preparing": "რენდერის მომზადება...",
     "admin.player_map.tiles_rendered": ":count ფრაგმენტი დარენდერებული (~:percent%)",
     "admin.player_map.title": "მოთამაშეთა რუკა",

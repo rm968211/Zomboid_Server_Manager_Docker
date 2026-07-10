@@ -7,7 +7,7 @@ class MapConfigBuilder
     /**
      * Build map configuration, preferring local tiles then falling back to proxy.
      *
-     * @return array{tileUrl: string|null, tileSize: int, minZoom: int, maxZoom: int, defaultZoom: int, center: array{x: int, y: int}, dzi: array|null}
+     * @return array{tileUrl: string|null, tileSize: int, minZoom: int, maxZoom: int, defaultZoom: int, center: array{x: int, y: int}, dzi: array|null, source: string}
      */
     public function build(): array
     {
@@ -25,6 +25,7 @@ class MapConfigBuilder
                     'y' => config('zomboid.map.center_y'),
                 ],
                 'dzi' => $localDzi,
+                'source' => 'local',
             ];
         }
 
@@ -54,6 +55,7 @@ class MapConfigBuilder
                 'maxNativeZoom' => $maxNativeZoom,
                 'isometric' => true,
             ],
+            'source' => 'proxy',
         ];
     }
 
