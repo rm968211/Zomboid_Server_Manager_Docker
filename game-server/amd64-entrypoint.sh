@@ -8,15 +8,20 @@
 # distributed to connecting players. DoLuaChecksum=false prevents checksum
 # errors. Source files are mounted at /home/steam/Zomboid/mods/ZomboidManager/.
 
-# --- Root-only init: fix volume permissions ---
+# --- Root-only init: fix volume permissions, stage baked mod ---
 # The renegademaster image has no 'steam' user — it runs as root natively.
-# Just ensure volume directories are writable (for shared lua-bridge volume).
 if [ "$(id -u)" = "0" ]; then
     echo "[entrypoint] Fixing volume permissions..."
     chmod -R 1777 /home/steam/Zomboid/Lua 2>/dev/null || true
     chmod 777 /home/steam/Zomboid/Server 2>/dev/null || true
     chmod 777 /home/steam/Zomboid/db 2>/dev/null || true
     chmod 777 /home/steam/Zomboid/Saves 2>/dev/null || true
+    # Stage ZomboidManager mod from image into the data volume (source baked at /opt/zm-mod)
+    if [ -d /opt/zm-mod ]; then
+        mkdir -p /home/steam/Zomboid/mods
+        cp -r /opt/zm-mod /home/steam/Zomboid/mods/ZomboidManager 2>/dev/null || true
+        echo "[entrypoint] Staged ZomboidManager mod from image"
+    fi
 fi
 
 CONFIGURE_SCRIPT="/home/steam/configure-server.sh"

@@ -99,14 +99,37 @@ jobs:
           flavor: |
             latest=${{ github.event_name != 'workflow_dispatch' || inputs.push_latest == 'true' }}
 
-      - name: Build and push zomboid-server
+      - name: Build and push zomboid-server (arm64 staging)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: game-server/Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ steps.meta-server.outputs.tags }}
+          provenance: false
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server:arm64-staging
           labels: ${{ steps.meta-server.outputs.labels }}
-          cache-from: type=gha,scope=zomboid-server
-          cache-to: type=gha,mode=max,scope=zomboid-server
+          cache-from: type=gha,scope=zomboid-server-arm64
+          cache-to: type=gha,mode=max,scope=zomboid-server-arm64
+
+      - name: Build and push zomboid-server (amd64 staging)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: game-server/Dockerfile.amd64
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server:amd64-staging
+          labels: ${{ steps.meta-server.outputs.labels }}
+          cache-from: type=gha,scope=zomboid-server-amd64
+          cache-to: type=gha,mode=max,scope=zomboid-server-amd64
+
+      - name: Create multi-arch manifest for zomboid-server
+        run: |
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker buildx imagetools create --tag "$tag" \
+              "${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server:arm64-staging" \
+              "${{ secrets.DOCKERHUB_USERNAME }}/zomboid-server:amd64-staging"
+          done <<< "${{ steps.meta-server.outputs.tags }}"
