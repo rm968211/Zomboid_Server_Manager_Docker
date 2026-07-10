@@ -109,20 +109,30 @@ class GameVersionReader
         }
 
         try {
+            $size = @filesize($path);
+            if ($size === false || $size === 0) {
+                return null;
+            }
+
             $fp = fopen($path, 'r');
             if ($fp === false) {
                 return null;
             }
 
-            $chunk = fread($fp, 4096);
+            // Read the last 64 KB — version appears once per boot and the most
+            // recent startup entry is always near the end of a growing log file.
+            $readSize = min(65536, $size);
+            fseek($fp, -$readSize, SEEK_END);
+            $chunk = fread($fp, $readSize);
             fclose($fp);
 
             if ($chunk === false) {
                 return null;
             }
 
-            if (preg_match('/version(?:Number)?\s*=\s*([0-9]+\.[0-9]+(?:\.[0-9]+)*)/', $chunk, $matches)) {
-                return $matches[1];
+            // Return the last match when multiple boots are present in the window
+            if (preg_match_all('/version(?:Number)?\s*=\s*([0-9]+\.[0-9]+(?:\.[0-9]+)*)/', $chunk, $matches)) {
+                return end($matches[1]);
             }
         } catch (\Throwable $e) {
             Log::debug('GameVersionReader: failed to read server-console.txt', [
