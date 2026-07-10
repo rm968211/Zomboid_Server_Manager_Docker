@@ -72,6 +72,16 @@ class ShopPurchaseService
             );
             Wallet::query()->lockForUpdate()->find($wallet->id);
 
+            // Re-check stock under a row lock: the caller's earlier check used a
+            // pre-transaction read, so two concurrent purchases for the last unit
+            // could otherwise both pass and oversell.
+            if ($item->stock !== null) {
+                $lockedItem = ShopItem::query()->lockForUpdate()->find($item->id);
+                if ($lockedItem->stock < $quantity) {
+                    throw new InvalidArgumentException('Insufficient stock available.');
+                }
+            }
+
             $availableBalance = $this->walletService->getAvailableBalance($user);
             if ($availableBalance < $totalPrice) {
                 throw new InsufficientBalanceException($availableBalance, $totalPrice);

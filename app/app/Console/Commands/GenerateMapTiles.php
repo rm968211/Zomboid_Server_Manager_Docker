@@ -22,12 +22,14 @@ class GenerateMapTiles extends Command
 
         if (! is_dir($serverPath)) {
             $this->error("Game server path does not exist: {$serverPath}");
+            $this->writeStatus('failed', "Game server path does not exist: {$serverPath}");
 
             return self::FAILURE;
         }
 
         if (! is_dir($serverPath.'/media')) {
             $this->error("Game server files not ready yet (no media/ directory in {$serverPath})");
+            $this->writeStatus('failed', "Game server files not ready yet (no media/ directory in {$serverPath})");
 
             return self::FAILURE;
         }
@@ -36,6 +38,7 @@ class GenerateMapTiles extends Command
         exec('python3 --version 2>&1', $output, $exitCode);
         if ($exitCode !== 0) {
             $this->error('Python3 is required but not found.');
+            $this->writeStatus('failed', 'Python3 is required but not found.');
 
             return self::FAILURE;
         }
@@ -46,6 +49,7 @@ class GenerateMapTiles extends Command
         $pzmap2dziPath = $this->findPzmap2dzi();
         if ($pzmap2dziPath === null) {
             $this->error('pzmap2dzi not found.');
+            $this->writeStatus('failed', 'pzmap2dzi not found.');
 
             return self::FAILURE;
         }
@@ -59,6 +63,8 @@ class GenerateMapTiles extends Command
             return self::SUCCESS;
         }
 
+        $this->writeStatus('running', null);
+
         // Create output directory
         if (! is_dir($tilesPath)) {
             mkdir($tilesPath, 0755, true);
@@ -71,18 +77,53 @@ class GenerateMapTiles extends Command
         // Step 1: Unpack textures
         $this->info('Step 1/2: Unpacking textures...');
         if (! $this->runPzmap($pzmap2dziPath, $confPath, 'unpack')) {
+            $this->writeStatus('failed', $this->tailLog());
+
             return self::FAILURE;
         }
 
         // Step 2: Render isometric tiles
         $this->info('Step 2/2: Rendering isometric tiles...');
         if (! $this->runPzmap($pzmap2dziPath, $confPath, 'render base')) {
+            $this->writeStatus('failed', $this->tailLog());
+
             return self::FAILURE;
         }
 
         $this->info('Map tiles generated successfully at: '.$tilesPath);
+        $this->writeStatus('success', null);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Persist generation status so the admin UI can surface real progress/errors
+     * instead of silently showing a generic "no tiles yet" message.
+     */
+    private function writeStatus(string $status, ?string $error): void
+    {
+        $statusPath = config('zomboid.map.status_path');
+        $payload = [
+            'status' => $status,
+            'error' => $error,
+            'updated_at' => now()->toIso8601String(),
+        ];
+
+        $tmpPath = $statusPath.'.tmp';
+        file_put_contents($tmpPath, json_encode($payload, JSON_PRETTY_PRINT));
+        rename($tmpPath, $statusPath);
+    }
+
+    private function tailLog(): string
+    {
+        $logFile = storage_path('logs/pzmap2dzi.log');
+        if (! is_file($logFile)) {
+            return 'Unknown error (no log file produced).';
+        }
+
+        $lines = file($logFile);
+
+        return implode('', array_slice($lines, -20));
     }
 
     private function runPzmap(string $pzmap2dziPath, string $confPath, string $subcommand): bool

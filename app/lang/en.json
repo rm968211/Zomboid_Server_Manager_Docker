@@ -392,6 +392,8 @@
     "admin.player_map.server_offline_warning": "Server is offline. Player positions show last known locations.",
     "admin.player_map.server_starting": "Server is starting. Live positions will appear once the game server is ready.",
     "admin.player_map.server_starting_warning": "Server is starting. Live positions will appear once the game server is ready.",
+    "admin.player_map.tile_error": "Map tile generation failed.",
+    "admin.player_map.tile_error_hint": "Check storage/logs/pzmap2dzi.log on the app container, then re-run",
     "admin.player_map.tiles_preparing": "Preparing render...",
     "admin.player_map.tiles_rendered": ":count tiles rendered (~:percent%)",
     "admin.player_map.title": "Player Map",

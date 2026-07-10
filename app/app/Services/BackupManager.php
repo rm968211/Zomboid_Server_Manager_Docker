@@ -108,13 +108,17 @@ class BackupManager
 
         // 2. Stop the game server and wait for file handles to be released
         $this->stopServer();
-        sleep(3);
 
-        // 3. Extract backup over save directory
-        $this->extractBackup($backup);
+        try {
+            sleep(3);
 
-        // 4. Start the game server
-        $this->docker->startContainer();
+            // 3. Extract backup over save directory
+            $this->extractBackup($backup);
+        } finally {
+            // 4. Start the game server even if extraction fails — otherwise a
+            // corrupt/unsafe backup leaves the server stopped indefinitely.
+            $this->docker->startContainer();
+        }
 
         return [
             'pre_rollback_backup' => $preRollback['backup'],
@@ -254,6 +258,14 @@ class BackupManager
                 'error' => $result->errorOutput(),
                 'exit_code' => $result->exitCode(),
             ]);
+
+            // But a non-zero exit that also produced no usable archive isn't a partial
+            // backup — it's a total failure (disk full, permissions, etc). Letting it
+            // through would let callers (rollback/import) trust a worthless "successful"
+            // 0-byte safety snapshot before overwriting live data.
+            if (! file_exists($outputPath) || filesize($outputPath) === 0) {
+                throw new \RuntimeException('Backup archive was not created: '.$result->errorOutput());
+            }
         }
     }
 

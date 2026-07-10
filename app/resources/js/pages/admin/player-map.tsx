@@ -3,20 +3,13 @@ import { AlertTriangle, Circle, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import PlayerActionDialogs from '@/components/player-action-dialogs';
 import PzMap from '@/components/pz-map';
-import { useTranslation } from '@/hooks/use-translation';
 import type { ZoneOverlay } from '@/components/pz-map';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/hooks/use-translation';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import type { MapConfig, PlayerMarker } from '@/types/server';
-
-type TileProgress = {
-    generating: boolean;
-    completed: number;
-    total: number;
-    percent: number;
-};
 
 type SafeZone = {
     id: string;
@@ -33,7 +26,9 @@ type Props = {
     serverStatus: 'offline' | 'starting' | 'online';
     mapConfig: MapConfig;
     hasTiles: boolean;
-    tileProgress: TileProgress | null;
+    usingLocalTiles: boolean;
+    tilesGenerating: boolean;
+    tileError: string | null;
     safeZones: SafeZone[];
 };
 
@@ -45,9 +40,21 @@ const statusDotColor: Record<PlayerMarker['status'], string> = {
 
 const ZONE_COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'];
 
-export default function PlayerMap({ markers, onlineCount, serverStatus, mapConfig, hasTiles, tileProgress, safeZones }: Props) {
+export default function PlayerMap({
+    markers,
+    onlineCount,
+    serverStatus,
+    mapConfig,
+    hasTiles,
+    usingLocalTiles,
+    tilesGenerating,
+    tileError,
+    safeZones,
+}: Props) {
     const { t } = useTranslation();
-    usePoll(5000, { only: ['markers', 'onlineCount', 'serverStatus', 'hasTiles', 'tileProgress', 'safeZones'] });
+    usePoll(5000, {
+        only: ['markers', 'onlineCount', 'serverStatus', 'hasTiles', 'usingLocalTiles', 'tilesGenerating', 'tileError', 'safeZones'],
+    });
 
     const zoneOverlays: ZoneOverlay[] = useMemo(
         () => safeZones.map((zone, i) => ({ ...zone, color: ZONE_COLORS[i % ZONE_COLORS.length] })),
@@ -132,30 +139,33 @@ export default function PlayerMap({ markers, onlineCount, serverStatus, mapConfi
 
                 <Card className="isolate flex-1">
                     <CardContent className="relative h-[350px] p-0 sm:h-[500px] lg:h-[600px]">
-                        {!hasTiles && tileProgress?.generating && (
+                        {!usingLocalTiles && tilesGenerating && (
                             <div className="absolute top-2 left-1/2 z-[1000] w-64 -translate-x-1/2 rounded-lg border bg-background/90 px-4 py-3 shadow-sm backdrop-blur-sm sm:w-72">
                                 <div className="flex items-center gap-2 text-sm font-medium">
                                     <Loader2 className="size-4 animate-spin text-primary" />
                                     {t('admin.player_map.generating_tiles')}
                                 </div>
                                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                                    {tileProgress.completed > 0 ? (
-                                        <div
-                                            className="h-full rounded-full bg-primary transition-all duration-500"
-                                            style={{ width: `${Math.max(tileProgress.percent, 2)}%` }}
-                                        />
-                                    ) : (
-                                        <div className="h-full w-full animate-pulse rounded-full bg-primary/30" />
-                                    )}
+                                    <div className="h-full w-full animate-pulse rounded-full bg-primary/30" />
                                 </div>
-                                <p className="text-muted-foreground mt-1 text-xs">
-                                    {tileProgress.completed > 0
-                                        ? t('admin.player_map.tiles_rendered', { count: tileProgress.completed.toLocaleString(), percent: String(tileProgress.percent) })
-                                        : t('admin.player_map.preparing_render')}
+                                <p className="text-muted-foreground mt-1 text-xs">{t('admin.player_map.preparing_render')}</p>
+                            </div>
+                        )}
+                        {!usingLocalTiles && !tilesGenerating && tileError && (
+                            <div className="absolute top-2 left-1/2 z-[1000] w-72 -translate-x-1/2 rounded-lg border border-red-500/30 bg-background/95 px-4 py-3 text-xs shadow-sm backdrop-blur-sm sm:w-96">
+                                <div className="flex items-center gap-2 text-sm font-medium text-red-400">
+                                    <AlertTriangle className="size-4 shrink-0" />
+                                    {t('admin.player_map.tile_error')}
+                                </div>
+                                <pre className="text-muted-foreground mt-1.5 max-h-24 overflow-auto rounded bg-muted/50 p-1.5 font-mono text-[11px] whitespace-pre-wrap">
+                                    {tileError}
+                                </pre>
+                                <p className="text-muted-foreground mt-1.5 text-xs">
+                                    {t('admin.player_map.tile_error_hint')} <code className="font-mono">{t('admin.player_map.no_tiles_command')}</code>
                                 </p>
                             </div>
                         )}
-                        {!hasTiles && !tileProgress?.generating && (
+                        {!usingLocalTiles && !tilesGenerating && !tileError && (
                             <div className="bg-muted/80 text-muted-foreground absolute top-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md px-3 py-1.5 text-xs backdrop-blur-sm">
                                 {t('admin.player_map.no_tiles')} <code className="font-mono">{t('admin.player_map.no_tiles_command')}</code> {t('admin.player_map.no_tiles_suffix')}
                             </div>
