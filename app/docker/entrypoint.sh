@@ -17,6 +17,13 @@ find /var/www/html/storage /var/www/html/bootstrap/cache -not -name '.gitignore'
 find /var/www/html/storage /var/www/html/bootstrap/cache -type d -exec chmod 775 {} + 2>/dev/null || true
 find /var/www/html/storage /var/www/html/bootstrap/cache -type f -not -name '.gitignore' -exec chmod 664 {} + 2>/dev/null || true
 
+# Pre-create the app log as www-data BEFORE any root-run artisan command below —
+# otherwise the first root process to log creates it root-owned and php-fpm
+# (www-data) 500s on every request that tries to log.
+touch /var/www/html/storage/logs/laravel.log 2>/dev/null || true
+chown www-data:www-data /var/www/html/storage/logs/laravel.log 2>/dev/null || true
+chmod 664 /var/www/html/storage/logs/laravel.log 2>/dev/null || true
+
 # ── PZ data permissions ──────────────────────────────────────────────
 # Game server creates config files as root — make them writable by www-data
 # so the Laravel app can update server.ini and SandboxVars.lua from the web UI.

@@ -54,7 +54,10 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
+            // 'single' (fixed filename), not 'daily': root-run scheduler/entrypoint
+            // commands would create each day's new log file root-owned, leaving
+            // php-fpm (www-data) unable to append — every request that logs then 500s.
+            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
 

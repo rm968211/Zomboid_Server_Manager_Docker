@@ -67,7 +67,8 @@ class WipeGameServer implements ShouldQueue
         // 3. Delete save data + PZ internal backups (PZ auto-restores from these on startup)
         $dataPath = config('zomboid.paths.data');
         $serverName = config('zomboid.server_name', 'ZomboidServer');
-        $savePath = "{$dataPath}/Saves/Multiplayer/{$serverName}";
+        $saveName = config('zomboid.save_name', $serverName);
+        $savePath = "{$dataPath}/Saves/Multiplayer/{$saveName}";
         $startupBackups = "{$dataPath}/backups/startup";
         $serverDb = "{$dataPath}/db/{$serverName}.db";
 

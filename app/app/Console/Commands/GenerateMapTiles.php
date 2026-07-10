@@ -173,7 +173,7 @@ class GenerateMapTiles extends Command
         pz_root: |-
             {$serverPath}
 
-        output_path: |-
+        output_root: |-
             {$tilesPath}
 
         output_entry: default
